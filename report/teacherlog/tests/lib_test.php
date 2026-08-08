@@ -60,9 +60,28 @@ class lib_test extends \advanced_testcase {
         $this->assertCount(1, $filtered);
         $this->assertEquals('Math 101', $filtered[0]->coursename);
 
-        $filtered = report_teacherlog_filter_rows($rows, 0, 'forum', '');
+        $filtered = report_teacherlog_filter_rows($rows, 0, 'Forum', '');
         $this->assertCount(1, $filtered);
         $this->assertEquals('History', $filtered[0]->coursename);
+    }
+
+    /**
+     * Test filter option collection.
+     */
+    public function test_collect_filter_options(): void {
+        $rows = [
+            (object)['courseid' => 10, 'modulename' => 'Forum', 'action' => 'Viewed'],
+            (object)['courseid' => 10, 'modulename' => 'Assignment 1', 'action' => 'Submitted'],
+            (object)['courseid' => 20, 'modulename' => 'Quiz', 'action' => 'Viewed'],
+        ];
+
+        $options = report_teacherlog_collect_filter_options($rows);
+        $this->assertEquals(['Assignment 1', 'Forum', 'Quiz'], array_values($options['modules']));
+        $this->assertEquals(['Submitted', 'Viewed'], array_values($options['actions']));
+
+        $options = report_teacherlog_collect_filter_options($rows, 10);
+        $this->assertEquals(['Assignment 1', 'Forum'], array_values($options['modules']));
+        $this->assertEquals(['Submitted', 'Viewed'], array_values($options['actions']));
     }
 
     /**

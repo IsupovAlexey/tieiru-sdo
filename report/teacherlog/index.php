@@ -175,6 +175,26 @@ echo $OUTPUT->header();
 echo $OUTPUT->notification(get_string('helpnote', 'report_teacherlog'), 'info');
 echo $OUTPUT->notification(get_string('timespentnotavailable', 'report_teacherlog'), 'notifymessage');
 
+$formshowerrors = $mform->is_submitted() && !$params;
+if (!$formshowerrors && $params && !$error) {
+    $displaycustom = [
+        'teacherid' => $params->teacherid,
+        'courseid' => $params->courseid,
+        'timefrom' => $params->timefrom,
+        'timeto' => $params->timeto - DAYSECS,
+        'filtermodule' => $params->filtermodule,
+        'filteraction' => $params->filteraction,
+        'choosereport' => 1,
+        'hasreportdata' => !empty($allrows),
+    ];
+    if (!empty($allrows)) {
+        $filteroptions = report_teacherlog_collect_filter_options($allrows, (int)$params->courseid);
+        $displaycustom['moduleoptions'] = $filteroptions['modules'];
+        $displaycustom['actionoptions'] = $filteroptions['actions'];
+    }
+    $mform = new report_form($url, $displaycustom);
+}
+
 $mform->display();
 
 if ($error) {

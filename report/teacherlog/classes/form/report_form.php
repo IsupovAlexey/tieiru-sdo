@@ -67,19 +67,26 @@ class report_form extends \moodleform {
 
         $mform->addElement('header', 'textfilterheading', get_string('textfilterheading', 'report_teacherlog'));
 
-        $mform->addElement('text', 'filtermodule', get_string('modulefilter', 'report_teacherlog'), [
-            'size' => 40,
-            'placeholder' => get_string('modulefilter_placeholder', 'report_teacherlog'),
-        ]);
-        $mform->setType('filtermodule', PARAM_RAW_TRIMMED);
-        $mform->addHelpButton('filtermodule', 'modulefilter', 'report_teacherlog');
+        if (!empty($custom['hasreportdata'])) {
+            $moduleoptions = $custom['moduleoptions'] ?? [];
+            $actionoptions = $custom['actionoptions'] ?? [];
 
-        $mform->addElement('text', 'filteraction', get_string('actionfilter', 'report_teacherlog'), [
-            'size' => 40,
-            'placeholder' => get_string('actionfilter_placeholder', 'report_teacherlog'),
-        ]);
-        $mform->setType('filteraction', PARAM_RAW_TRIMMED);
-        $mform->addHelpButton('filteraction', 'actionfilter', 'report_teacherlog');
+            $mform->addElement('searchableselector', 'filtermodule', get_string('modulefilter', 'report_teacherlog'),
+                $moduleoptions);
+            $mform->addHelpButton('filtermodule', 'modulefilter', 'report_teacherlog');
+
+            $mform->addElement('searchableselector', 'filteraction', get_string('actionfilter', 'report_teacherlog'),
+                $actionoptions);
+            $mform->addHelpButton('filteraction', 'actionfilter', 'report_teacherlog');
+            $mform->setType('filtermodule', PARAM_RAW_TRIMMED);
+            $mform->setType('filteraction', PARAM_RAW_TRIMMED);
+        } else {
+            $mform->addElement('static', 'filteroptionshint', '', get_string('filteroptionsafterreport', 'report_teacherlog'));
+            $mform->addElement('hidden', 'filtermodule', '');
+            $mform->setType('filtermodule', PARAM_RAW_TRIMMED);
+            $mform->addElement('hidden', 'filteraction', '');
+            $mform->setType('filteraction', PARAM_RAW_TRIMMED);
+        }
 
         $mform->addElement('hidden', 'choosereport', 1);
         $mform->setType('choosereport', PARAM_INT);

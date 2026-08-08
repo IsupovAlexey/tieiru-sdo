@@ -263,7 +263,43 @@ function report_teacherlog_date_to_timestamp($date): int {
 }
 
 /**
- * Applies text filters to report rows.
+ * Builds module and action dropdown options from loaded report rows.
+ *
+ * @param array $rows
+ * @param int $courseid Optional course to limit options to.
+ * @return array{modules: array<string, string>, actions: array<string, string>}
+ */
+function report_teacherlog_collect_filter_options(array $rows, int $courseid = 0): array {
+    $modules = [];
+    $actions = [];
+
+    foreach ($rows as $row) {
+        if ($courseid > 0 && (int)($row->courseid ?? 0) !== $courseid) {
+            continue;
+        }
+
+        $module = trim(html_to_text((string)($row->modulename ?? ''), 0, false));
+        if ($module !== '' && $module !== '—') {
+            $modules[$module] = $module;
+        }
+
+        $action = trim(html_to_text((string)($row->action ?? ''), 0, false));
+        if ($action !== '') {
+            $actions[$action] = $action;
+        }
+    }
+
+    natcasesort($modules);
+    natcasesort($actions);
+
+    return [
+        'modules' => $modules,
+        'actions' => $actions,
+    ];
+}
+
+/**
+ * Applies optional filters to report rows.
  *
  * @param array $rows
  * @param string $coursefilter
@@ -284,10 +320,12 @@ function report_teacherlog_filter_rows(array $rows, int $courseid, string $modul
         if ($courseid > 0 && (int)($row->courseid ?? 0) !== $courseid) {
             return false;
         }
-        if ($modulefilter !== '' && strpos(report_teacherlog_row_filter_text($row, 'module'), $modulefilter) === false) {
+        if ($modulefilter !== ''
+                && report_teacherlog_row_filter_text($row, 'module') !== $modulefilter) {
             return false;
         }
-        if ($actionfilter !== '' && strpos(report_teacherlog_row_filter_text($row, 'action'), $actionfilter) === false) {
+        if ($actionfilter !== ''
+                && report_teacherlog_row_filter_text($row, 'action') !== $actionfilter) {
             return false;
         }
         return true;
@@ -295,7 +333,7 @@ function report_teacherlog_filter_rows(array $rows, int $courseid, string $modul
 }
 
 /**
- * Normalizes user-entered filter text for case-insensitive substring matching.
+ * Normalizes filter value for case-insensitive exact matching.
  *
  * @param string $filter
  * @return string
