@@ -41,73 +41,82 @@ $PAGE->set_title(get_string('pluginname', 'report_teacherlog'));
 $PAGE->set_heading(get_string('pluginname', 'report_teacherlog'));
 $PAGE->requires->css('/report/teacherlog/styles.css');
 
-// Handle form submission first. Date fields are arrays in POST and must not be read via optional_param().
-$submitformcustom = [
+// Bookmarkable state from the query string (GET only — POST date fields are arrays).
+$download = optional_param('download', '', PARAM_ALPHA);
+
+$formcustom = [
     'teacherid' => 0,
     'courseid' => 0,
     'timefrom' => time() - (\report_teacherlog\config::DEFAULT_DATERANGE * DAYSECS),
     'timeto' => time(),
     'filtermodule' => '',
     'filteraction' => '',
-    'choosereport' => 1,
-    'showrefresh' => false,
+    'choosereport' => 0,
 ];
-$submitmform = new report_form(null, $submitformcustom);
-if ($formdata = $submitmform->get_data()) {
+
+$url = new moodle_url('/report/teacherlog/index.php');
+$PAGE->set_url($url);
+
+$mform = new report_form($url, $formcustom);
+
+$params = null;
+$forcerefresh = false;
+
+if ($formdata = $mform->get_data()) {
     $params = report_form::normalize_params($formdata);
     if (!empty($params->refresh)) {
+        $forcerefresh = true;
         $SESSION->report_teacherlog_forcerefresh = cache_helper::build_key(
             $params->teacherid,
             $params->timefrom,
             $params->timeto
         );
     }
-    redirect(new moodle_url('/report/teacherlog/index.php', report_teacherlog_url_params($params)));
-}
+    $urlparams = report_teacherlog_url_params($params);
+    $url = new moodle_url('/report/teacherlog/index.php', $urlparams);
+    $PAGE->set_url($url);
+    if (!headers_sent()) {
+        redirect($url);
+    }
+} else if (!$mform->is_submitted()) {
+    $choosereport = report_teacherlog_get_int_param('choosereport');
+    $teacherid = report_teacherlog_get_int_param('teacherid');
+    $courseid = report_teacherlog_get_int_param('courseid');
+    $timefrom = report_teacherlog_get_int_param('timefrom');
+    $timeto = report_teacherlog_get_int_param('timeto');
+    $filtermodule = report_teacherlog_get_string_param('filtermodule');
+    $filteraction = report_teacherlog_get_string_param('filteraction');
 
-// Report state is carried in the query string after redirect.
-$download = optional_param('download', '', PARAM_ALPHA);
-$choosereport = report_teacherlog_get_int_param('choosereport');
-$teacherid = report_teacherlog_get_int_param('teacherid');
-$courseid = report_teacherlog_get_int_param('courseid');
-$timefrom = report_teacherlog_get_int_param('timefrom');
-$timeto = report_teacherlog_get_int_param('timeto');
-$filtermodule = report_teacherlog_get_string_param('filtermodule');
-$filteraction = report_teacherlog_get_string_param('filteraction');
+    if ($courseid && !$teacherid) {
+        $teacherid = report_teacherlog_resolve_teacher_for_course($courseid);
+    }
 
-if ($courseid && !$teacherid) {
-    $teacherid = report_teacherlog_resolve_teacher_for_course($courseid);
-}
-
-$params = null;
-if ($choosereport && $teacherid && $timefrom && $timeto) {
-    $params = (object)[
+    $formcustom = [
         'teacherid' => $teacherid,
         'courseid' => $courseid,
-        'timefrom' => $timefrom,
-        'timeto' => $timeto,
+        'timefrom' => $timefrom ?: (time() - (\report_teacherlog\config::DEFAULT_DATERANGE * DAYSECS)),
+        'timeto' => $timeto ? ($timeto - DAYSECS) : time(),
         'filtermodule' => $filtermodule,
         'filteraction' => $filteraction,
-        'choosereport' => 1,
+        'choosereport' => $choosereport,
     ];
+
+    if ($choosereport && $teacherid && $timefrom && $timeto) {
+        $params = (object)[
+            'teacherid' => $teacherid,
+            'courseid' => $courseid,
+            'timefrom' => $timefrom,
+            'timeto' => $timeto,
+            'filtermodule' => $filtermodule,
+            'filteraction' => $filteraction,
+            'choosereport' => 1,
+        ];
+        $url = new moodle_url('/report/teacherlog/index.php', report_teacherlog_url_params($params));
+        $PAGE->set_url($url);
+        $mform = new report_form($url, $formcustom);
+    }
 }
 
-$urlparams = $params ? report_teacherlog_url_params($params) : [];
-$url = new moodle_url('/report/teacherlog/index.php', $urlparams);
-$PAGE->set_url($url);
-
-$formcustom = [
-    'teacherid' => $teacherid,
-    'courseid' => $courseid,
-    'timefrom' => $timefrom ?: (time() - (\report_teacherlog\config::DEFAULT_DATERANGE * DAYSECS)),
-    'timeto' => $timeto ? ($timeto - DAYSECS) : time(),
-    'filtermodule' => $filtermodule,
-    'filteraction' => $filteraction,
-    'choosereport' => $choosereport,
-    'showrefresh' => false,
-];
-
-$forcerefresh = false;
 if ($params && !empty($SESSION->report_teacherlog_forcerefresh)) {
     $cachekey = cache_helper::build_key($params->teacherid, $params->timefrom, $params->timeto);
     if ($SESSION->report_teacherlog_forcerefresh === $cachekey) {
@@ -130,7 +139,6 @@ if ($params) {
         $error = get_string('daterangetoolong', 'report_teacherlog', \report_teacherlog\config::MAX_DATERANGE);
     } else {
         try {
-            // Release session lock before heavy log query (see report/log).
             \core\session\manager::write_close();
             $allrows = cache_helper::get_or_fetch(
                 $params->teacherid,
@@ -147,7 +155,6 @@ if ($params) {
             $hasactivefilters = $params->courseid > 0
                 || report_teacherlog_normalize_filter($params->filtermodule) !== ''
                 || report_teacherlog_normalize_filter($params->filteraction) !== '';
-            $formcustom['showrefresh'] = true;
         } catch (moodle_exception $e) {
             $error = $e->getMessage();
         }
@@ -168,8 +175,6 @@ echo $OUTPUT->header();
 echo $OUTPUT->notification(get_string('helpnote', 'report_teacherlog'), 'info');
 echo $OUTPUT->notification(get_string('timespentnotavailable', 'report_teacherlog'), 'notifymessage');
 
-$formcustom['showrefresh'] = $formcustom['showrefresh'] || !empty($rows) || !empty($params);
-$mform = new report_form($PAGE->url->out(false), $formcustom);
 $mform->display();
 
 if ($error) {

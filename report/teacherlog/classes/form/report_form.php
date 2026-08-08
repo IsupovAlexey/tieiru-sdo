@@ -86,9 +86,7 @@ class report_form extends \moodleform {
 
         $buttonarray = [];
         $buttonarray[] = $mform->createElement('submit', 'submitbutton', get_string('showreport', 'report_teacherlog'));
-        if (!empty($custom['showrefresh'])) {
-            $buttonarray[] = $mform->createElement('submit', 'refreshbutton', get_string('refreshdata', 'report_teacherlog'));
-        }
+        $buttonarray[] = $mform->createElement('submit', 'refreshbutton', get_string('refreshdata', 'report_teacherlog'));
         $mform->addGroup($buttonarray, 'buttonar', '', ' ', false);
 
         $defaults = [
