@@ -66,7 +66,7 @@ function report_teacherlog_get_teacher_options(int $courseid = 0): array {
     $userfieldsapi = \core_user\fields::for_name();
     $userfields = $userfieldsapi->get_sql('u', false, '', '', false);
 
-    $sql = "SELECT DISTINCT u.id, u.email {$userfields->selects}
+    $sql = "SELECT DISTINCT u.id, u.email, {$userfields->selects}
               FROM {user} u
               JOIN {role_assignments} ra ON ra.userid = u.id
               JOIN {role} r ON r.id = ra.roleid

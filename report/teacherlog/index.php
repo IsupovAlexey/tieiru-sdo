@@ -130,6 +130,8 @@ if ($params) {
         $error = get_string('daterangetoolong', 'report_teacherlog', report_teacherlog_config::MAX_DATERANGE);
     } else {
         try {
+            // Release session lock before heavy log query (see report/log).
+            \core\session\manager::write_close();
             $allrows = cache_helper::get_or_fetch(
                 $params->teacherid,
                 $params->timefrom,
@@ -153,6 +155,7 @@ if ($params) {
 }
 
 if ($download && $params && $rows && !$error) {
+    \core\session\manager::write_close();
     $filename = 'teacherlog_' . $params->teacherid . '_' . userdate(time(), '%Y%m%d', 99, false);
     $table = new teacherlog_table($PAGE->url);
     $table->is_downloading($download, $filename, get_string('pluginname', 'report_teacherlog'));
