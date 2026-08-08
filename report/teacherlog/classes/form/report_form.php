@@ -24,6 +24,8 @@
 
 namespace report_teacherlog\form;
 
+use report_teacherlog\config;
+
 defined('MOODLE_INTERNAL') || die();
 
 require_once($GLOBALS['CFG']->libdir . '/formslib.php');
@@ -92,7 +94,7 @@ class report_form extends \moodleform {
         $defaults = [
             'teacherid' => $teacherid,
             'courseid' => $courseid,
-            'timefrom' => $custom['timefrom'] ?? (time() - (report_teacherlog_config::DEFAULT_DATERANGE * DAYSECS)),
+            'timefrom' => $custom['timefrom'] ?? (time() - (config::DEFAULT_DATERANGE * DAYSECS)),
             'timeto' => $custom['timeto'] ?? time(),
             'filtermodule' => $custom['filtermodule'] ?? '',
             'filteraction' => $custom['filteraction'] ?? '',
@@ -150,9 +152,9 @@ class report_form extends \moodleform {
 
         if ($timeto <= $timefrom) {
             $errors['timeto'] = get_string('daterangeinvalid', 'report_teacherlog');
-        } else if (($timeto - $timefrom) > (report_teacherlog_config::MAX_DATERANGE * DAYSECS)) {
+        } else if (($timeto - $timefrom) > (config::MAX_DATERANGE * DAYSECS)) {
             $errors['timeto'] = get_string('daterangetoolong', 'report_teacherlog',
-                report_teacherlog_config::MAX_DATERANGE);
+                config::MAX_DATERANGE);
         }
 
         return $errors;

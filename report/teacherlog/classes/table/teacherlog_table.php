@@ -24,6 +24,8 @@
 
 namespace report_teacherlog\table;
 
+use report_teacherlog\config;
+
 defined('MOODLE_INTERNAL') || die();
 
 require_once($GLOBALS['CFG']->libdir . '/tablelib.php');
@@ -86,7 +88,7 @@ class teacherlog_table extends \flexible_table {
             $pagerows = $rows;
             $this->pagesize(count($pagerows), count($pagerows));
         } else {
-            $perpage = report_teacherlog_config::PER_PAGE;
+            $perpage = config::PER_PAGE;
             $this->pagesize($perpage, count($rows));
             $pagerows = array_slice($rows, $this->get_page_start(), $perpage);
         }

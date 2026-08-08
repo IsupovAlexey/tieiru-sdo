@@ -15,18 +15,33 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Plugin version and other meta-data.
+ * Plugin configuration constants.
  *
  * @package   report_teacherlog
  * @copyright 2026
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+namespace report_teacherlog;
+
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->component = 'report_teacherlog';
-$plugin->version   = 2024080809;
-$plugin->requires  = 2022111800; // Moodle 4.1.x
-$plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '1.0';
-// Production target: PHP 7.4. Avoid PHP 8+ only syntax (typed constants, union types, match, etc.).
+/**
+ * Plugin configuration constants.
+ */
+final class config {
+    /** @var int Default report window in days. */
+    public const DEFAULT_DATERANGE = 30;
+
+    /** @var int Maximum allowed report window in days. */
+    public const MAX_DATERANGE = 365;
+
+    /** @var int Maximum number of log rows to fetch. */
+    public const MAX_ROWS = 10000;
+
+    /** @var int MUC cache TTL in seconds. */
+    public const CACHE_TTL = 3600;
+
+    /** @var int Rows per page in the table. */
+    public const PER_PAGE = 100;
+}

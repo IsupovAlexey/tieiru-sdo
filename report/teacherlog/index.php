@@ -45,7 +45,7 @@ $PAGE->requires->css('/report/teacherlog/styles.css');
 $submitformcustom = [
     'teacherid' => 0,
     'courseid' => 0,
-    'timefrom' => time() - (report_teacherlog_config::DEFAULT_DATERANGE * DAYSECS),
+    'timefrom' => time() - (\report_teacherlog\config::DEFAULT_DATERANGE * DAYSECS),
     'timeto' => time(),
     'filtermodule' => '',
     'filteraction' => '',
@@ -99,7 +99,7 @@ $PAGE->set_url($url);
 $formcustom = [
     'teacherid' => $teacherid,
     'courseid' => $courseid,
-    'timefrom' => $timefrom ?: (time() - (report_teacherlog_config::DEFAULT_DATERANGE * DAYSECS)),
+    'timefrom' => $timefrom ?: (time() - (\report_teacherlog\config::DEFAULT_DATERANGE * DAYSECS)),
     'timeto' => $timeto ? ($timeto - DAYSECS) : time(),
     'filtermodule' => $filtermodule,
     'filteraction' => $filteraction,
@@ -126,8 +126,8 @@ if ($params) {
         $error = get_string('invalidteacher', 'report_teacherlog');
     } else if ($params->timeto <= $params->timefrom) {
         $error = get_string('daterangeinvalid', 'report_teacherlog');
-    } else if (($params->timeto - $params->timefrom) > (report_teacherlog_config::MAX_DATERANGE * DAYSECS)) {
-        $error = get_string('daterangetoolong', 'report_teacherlog', report_teacherlog_config::MAX_DATERANGE);
+    } else if (($params->timeto - $params->timefrom) > (\report_teacherlog\config::MAX_DATERANGE * DAYSECS)) {
+        $error = get_string('daterangetoolong', 'report_teacherlog', \report_teacherlog\config::MAX_DATERANGE);
     } else {
         try {
             // Release session lock before heavy log query (see report/log).

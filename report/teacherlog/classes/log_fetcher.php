@@ -80,10 +80,10 @@ final class log_fetcher {
         \core_php_time_limit::raise();
 
         $count = self::count_events($teacherid, $timefrom, $timeto);
-        if ($count > report_teacherlog_config::MAX_ROWS) {
+        if ($count > config::MAX_ROWS) {
             $a = (object)[
                 'count' => $count,
-                'max' => report_teacherlog_config::MAX_ROWS,
+                'max' => config::MAX_ROWS,
             ];
             throw new \moodle_exception('toomanyrows', 'report_teacherlog', '', $a);
         }

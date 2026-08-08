@@ -25,26 +25,6 @@
 defined('MOODLE_INTERNAL') || die();
 
 /**
- * Plugin configuration constants.
- */
-final class report_teacherlog_config {
-    /** @var int Default report window in days. */
-    public const DEFAULT_DATERANGE = 30;
-
-    /** @var int Maximum allowed report window in days. */
-    public const MAX_DATERANGE = 365;
-
-    /** @var int Maximum number of log rows to fetch. */
-    public const MAX_ROWS = 10000;
-
-    /** @var int MUC cache TTL in seconds. */
-    public const CACHE_TTL = 3600;
-
-    /** @var int Rows per page in the table. */
-    public const PER_PAGE = 100;
-}
-
-/**
  * Returns users with teacher or editingteacher archetype for the selector.
  *
  * @param int $courseid Optional course to limit teachers to.
