@@ -63,7 +63,10 @@ function report_teacherlog_get_teacher_options(int $courseid = 0): array {
         $params['courseid'] = $courseid;
     }
 
-    $sql = "SELECT DISTINCT u.id, u.firstname, u.lastname, u.middlename, u.email, u.alternatename
+    $userfieldsapi = \core_user\fields::for_name();
+    $userfields = $userfieldsapi->get_sql('u', false, '', '', false);
+
+    $sql = "SELECT DISTINCT u.id, u.email {$userfields->selects}
               FROM {user} u
               JOIN {role_assignments} ra ON ra.userid = u.id
               JOIN {role} r ON r.id = ra.roleid
@@ -73,7 +76,7 @@ function report_teacherlog_get_teacher_options(int $courseid = 0): array {
                AND u.suspended = 0
           ORDER BY u.lastname, u.firstname";
 
-    $users = $DB->get_records_sql($sql, $params);
+    $users = $DB->get_records_sql($sql, array_merge($params, $userfields->params));
     return report_teacherlog_format_user_options($users);
 }
 
@@ -110,7 +113,7 @@ function report_teacherlog_get_course_options(int $teacherid = 0): array {
           ORDER BY c.fullname, c.shortname";
 
     $courses = $DB->get_records_sql($sql, $params);
-    $options = [0 => get_string('allcourses', 'report_teacherlog')];
+    $options = [0 => ''];
     foreach ($courses as $course) {
         $options[$course->id] = report_teacherlog_format_course_label($course);
     }
@@ -238,6 +241,32 @@ function report_teacherlog_is_teacher(int $userid): bool {
 }
 
 /**
+ * Reads an integer parameter from the query string only.
+ *
+ * @param string $name
+ * @return int
+ */
+function report_teacherlog_get_int_param(string $name): int {
+    if (!isset($_GET[$name])) {
+        return 0;
+    }
+    return clean_param($_GET[$name], PARAM_INT);
+}
+
+/**
+ * Reads a trimmed string parameter from the query string only.
+ *
+ * @param string $name
+ * @return string
+ */
+function report_teacherlog_get_string_param(string $name): string {
+    if (!isset($_GET[$name])) {
+        return '';
+    }
+    return clean_param($_GET[$name], PARAM_RAW_TRIMMED);
+}
+
+/**
  * Converts date selector array to midnight timestamp.
  *
  * @param array|int $date
@@ -340,7 +369,8 @@ function report_teacherlog_sort_rows(array $rows, array $sortcolumns): array {
         return $rows;
     }
 
-    $column = array_key_first($sortcolumns);
+    reset($sortcolumns);
+    $column = key($sortcolumns);
     $direction = $sortcolumns[$column];
 
     usort($rows, static function(stdClass $a, stdClass $b) use ($column, $direction): int {

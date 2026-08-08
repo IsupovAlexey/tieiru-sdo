@@ -25,7 +25,8 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'report_teacherlog';
-$plugin->version   = 2024080800;
-$plugin->requires  = 2022111800;
+$plugin->version   = 2024080806;
+$plugin->requires  = 2022111800; // Moodle 4.1.x
 $plugin->maturity  = MATURITY_STABLE;
 $plugin->release   = '1.0';
+// Production target: PHP 7.4. Avoid PHP 8+ only syntax (typed constants, union types, match, etc.).

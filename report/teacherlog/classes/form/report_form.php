@@ -51,6 +51,10 @@ class report_form extends \moodleform {
         $mform->addHelpButton('teacherid', 'teacher', 'report_teacherlog');
 
         $courses = report_teacherlog_get_course_options($teacherid);
+        $allcourseslabel = get_string('allcourses', 'report_teacherlog');
+        if (!empty($courses) && isset($courses[0])) {
+            $courses[0] = $allcourseslabel;
+        }
         $mform->addElement('searchableselector', 'courseid', get_string('coursefilter', 'report_teacherlog'), $courses);
         $mform->addHelpButton('courseid', 'coursefilter', 'report_teacherlog');
 

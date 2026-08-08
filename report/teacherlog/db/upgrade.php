@@ -46,5 +46,10 @@ function xmldb_report_teacherlog_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2024080800, 'report', 'teacherlog');
     }
 
+    if ($oldversion < 2024080805) {
+        get_string_manager()->reset_caches();
+        upgrade_plugin_savepoint(true, 2024080805, 'report', 'teacherlog');
+    }
+
     return true;
 }
