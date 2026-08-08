@@ -38,17 +38,21 @@ require_capability('report/teacherlog:view', $context);
 $download = optional_param('download', '', PARAM_ALPHA);
 $choosereport = optional_param('choosereport', 0, PARAM_INT);
 $teacherid = optional_param('teacherid', 0, PARAM_INT);
+$courseid = optional_param('courseid', 0, PARAM_INT);
 $timefrom = optional_param('timefrom', 0, PARAM_INT);
 $timeto = optional_param('timeto', 0, PARAM_INT);
-$filtercourse = optional_param('filtercourse', '', PARAM_TEXT);
-$filtermodule = optional_param('filtermodule', '', PARAM_TEXT);
-$filteraction = optional_param('filteraction', '', PARAM_TEXT);
+$filtermodule = optional_param('filtermodule', '', PARAM_RAW_TRIMMED);
+$filteraction = optional_param('filteraction', '', PARAM_RAW_TRIMMED);
+
+if ($courseid && !$teacherid) {
+    $teacherid = report_teacherlog_resolve_teacher_for_course($courseid);
+}
 
 $formcustom = [
     'teacherid' => $teacherid,
+    'courseid' => $courseid,
     'timefrom' => $timefrom ?: (time() - (report_teacherlog_config::DEFAULT_DATERANGE * DAYSECS)),
     'timeto' => $timeto ? ($timeto - DAYSECS) : time(),
-    'filtercourse' => $filtercourse,
     'filtermodule' => $filtermodule,
     'filteraction' => $filteraction,
     'choosereport' => $choosereport,
@@ -73,9 +77,9 @@ $params = null;
 if ($choosereport && $teacherid && $timefrom && $timeto) {
     $params = (object)[
         'teacherid' => $teacherid,
+        'courseid' => $courseid,
         'timefrom' => $timefrom,
         'timeto' => $timeto,
-        'filtercourse' => $filtercourse,
         'filtermodule' => $filtermodule,
         'filteraction' => $filteraction,
         'choosereport' => 1,
@@ -102,6 +106,8 @@ $PAGE->set_heading(get_string('pluginname', 'report_teacherlog'));
 $PAGE->requires->css('/report/teacherlog/styles.css');
 
 $rows = [];
+$allrows = [];
+$hasactivefilters = false;
 $error = null;
 
 if ($params) {
@@ -113,18 +119,21 @@ if ($params) {
         $error = get_string('daterangetoolong', 'report_teacherlog', report_teacherlog_config::MAX_DATERANGE);
     } else {
         try {
-            $rows = cache_helper::get_or_fetch(
+            $allrows = cache_helper::get_or_fetch(
                 $params->teacherid,
                 $params->timefrom,
                 $params->timeto,
                 $forcerefresh
             );
             $rows = report_teacherlog_filter_rows(
-                $rows,
-                $params->filtercourse,
+                $allrows,
+                $params->courseid,
                 $params->filtermodule,
                 $params->filteraction
             );
+            $hasactivefilters = $params->courseid > 0
+                || report_teacherlog_normalize_filter($params->filtermodule) !== ''
+                || report_teacherlog_normalize_filter($params->filteraction) !== '';
             $formcustom['showrefresh'] = true;
         } catch (moodle_exception $e) {
             $error = $e->getMessage();
@@ -147,9 +156,9 @@ echo $OUTPUT->notification(get_string('timespentnotavailable', 'report_teacherlo
 
 $formcustom = array_merge($formcustom, [
     'teacherid' => $params ? $params->teacherid : $formcustom['teacherid'],
+    'courseid' => $params ? $params->courseid : $formcustom['courseid'],
     'timefrom' => $params ? $params->timefrom : $formcustom['timefrom'],
     'timeto' => $params ? ($params->timeto - DAYSECS) : $formcustom['timeto'],
-    'filtercourse' => $params ? $params->filtercourse : $formcustom['filtercourse'],
     'filtermodule' => $params ? $params->filtermodule : $formcustom['filtermodule'],
     'filteraction' => $params ? $params->filteraction : $formcustom['filteraction'],
     'choosereport' => $params ? 1 : 0,
@@ -161,7 +170,11 @@ $mform->display();
 if ($error) {
     echo $OUTPUT->notification($error, 'notifyproblem');
 } else if ($params && empty($rows)) {
-    echo $OUTPUT->notification(get_string('noevents', 'report_teacherlog'), 'notifymessage');
+    if (!empty($hasactivefilters) && !empty($allrows)) {
+        echo $OUTPUT->notification(get_string('nofiltermatches', 'report_teacherlog'), 'notifymessage');
+    } else {
+        echo $OUTPUT->notification(get_string('noevents', 'report_teacherlog'), 'notifymessage');
+    }
 } else if ($rows) {
     echo html_writer::tag('p', get_string('reportcount', 'report_teacherlog', count($rows)),
         ['class' => 'report-teacherlog-count']);

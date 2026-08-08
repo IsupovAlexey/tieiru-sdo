@@ -39,22 +39,30 @@ class lib_test extends \advanced_testcase {
      */
     public function test_filter_rows(): void {
         $row1 = (object)[
+            'courseid' => 10,
             'coursename' => 'Math 101',
+            'coursefiltertext' => 'Math 101 MATH',
             'modulename' => 'Assignment 1',
             'action' => 'Viewed',
             'timecreated' => 100,
         ];
         $row2 = (object)[
+            'courseid' => 20,
             'coursename' => 'History',
+            'coursefiltertext' => 'History HIST',
             'modulename' => 'Forum',
             'action' => 'Submitted',
             'timecreated' => 200,
         ];
 
         $rows = [$row1, $row2];
-        $filtered = report_teacherlog_filter_rows($rows, 'math', '', '');
+        $filtered = report_teacherlog_filter_rows($rows, 10, '', '');
         $this->assertCount(1, $filtered);
         $this->assertEquals('Math 101', $filtered[0]->coursename);
+
+        $filtered = report_teacherlog_filter_rows($rows, 0, 'forum', '');
+        $this->assertCount(1, $filtered);
+        $this->assertEquals('History', $filtered[0]->coursename);
     }
 
     /**

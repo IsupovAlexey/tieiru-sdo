@@ -40,28 +40,39 @@ class report_form extends \moodleform {
         $mform = $this->_form;
         $custom = $this->_customdata;
 
-        $mform->addElement('header', 'filterheading', get_string('filterheading', 'report_teacherlog'));
+        $teacherid = (int)($custom['teacherid'] ?? 0);
+        $courseid = (int)($custom['courseid'] ?? 0);
 
-        $teachers = report_teacherlog_get_teacher_options();
+        $mform->addElement('header', 'filterheading', get_string('filterheading', 'report_teacherlog'));
+        $mform->addElement('static', 'filterhint', '', get_string('filterhint', 'report_teacherlog'));
+
+        $teachers = report_teacherlog_get_teacher_options($courseid);
         $mform->addElement('searchableselector', 'teacherid', get_string('teacher', 'report_teacherlog'), $teachers);
-        $mform->addRule('teacherid', get_string('chooseteacher', 'report_teacherlog'), 'required', null, 'client');
-        $mform->addRule('teacherid', get_string('chooseteacher', 'report_teacherlog'), 'required', null, 'server');
+        $mform->addHelpButton('teacherid', 'teacher', 'report_teacherlog');
+
+        $courses = report_teacherlog_get_course_options($teacherid);
+        $mform->addElement('searchableselector', 'courseid', get_string('coursefilter', 'report_teacherlog'), $courses);
+        $mform->addHelpButton('courseid', 'coursefilter', 'report_teacherlog');
 
         $mform->addElement('date_selector', 'timefrom', get_string('timefrom', 'report_teacherlog'),
             ['optional' => false]);
         $mform->addElement('date_selector', 'timeto', get_string('timeto', 'report_teacherlog'),
             ['optional' => false]);
 
-        $mform->addElement('text', 'filtercourse', get_string('coursefilter', 'report_teacherlog'), ['size' => 40]);
-        $mform->setType('filtercourse', PARAM_TEXT);
-        $mform->addHelpButton('filtercourse', 'coursefilter', 'report_teacherlog');
+        $mform->addElement('header', 'textfilterheading', get_string('textfilterheading', 'report_teacherlog'));
 
-        $mform->addElement('text', 'filtermodule', get_string('modulefilter', 'report_teacherlog'), ['size' => 40]);
-        $mform->setType('filtermodule', PARAM_TEXT);
+        $mform->addElement('text', 'filtermodule', get_string('modulefilter', 'report_teacherlog'), [
+            'size' => 40,
+            'placeholder' => get_string('modulefilter_placeholder', 'report_teacherlog'),
+        ]);
+        $mform->setType('filtermodule', PARAM_RAW_TRIMMED);
         $mform->addHelpButton('filtermodule', 'modulefilter', 'report_teacherlog');
 
-        $mform->addElement('text', 'filteraction', get_string('actionfilter', 'report_teacherlog'), ['size' => 40]);
-        $mform->setType('filteraction', PARAM_TEXT);
+        $mform->addElement('text', 'filteraction', get_string('actionfilter', 'report_teacherlog'), [
+            'size' => 40,
+            'placeholder' => get_string('actionfilter_placeholder', 'report_teacherlog'),
+        ]);
+        $mform->setType('filteraction', PARAM_RAW_TRIMMED);
         $mform->addHelpButton('filteraction', 'actionfilter', 'report_teacherlog');
 
         $mform->addElement('hidden', 'choosereport', 1);
@@ -75,15 +86,33 @@ class report_form extends \moodleform {
         $mform->addGroup($buttonarray, 'buttonar', '', ' ', false);
 
         $defaults = [
-            'teacherid' => $custom['teacherid'] ?? 0,
+            'teacherid' => $teacherid,
+            'courseid' => $courseid,
             'timefrom' => $custom['timefrom'] ?? (time() - (report_teacherlog_config::DEFAULT_DATERANGE * DAYSECS)),
             'timeto' => $custom['timeto'] ?? time(),
-            'filtercourse' => $custom['filtercourse'] ?? '',
             'filtermodule' => $custom['filtermodule'] ?? '',
             'filteraction' => $custom['filteraction'] ?? '',
-            'choosereport' => $custom['choosereport'] ?? 0,
+            'choosereport' => $custom['choosereport'] ?? 1,
         ];
         $mform->setDefaults($defaults);
+    }
+
+    /**
+     * Returns submitted data with teacher resolved from course when needed.
+     *
+     * @return \stdClass|false|null
+     */
+    public function get_data() {
+        $data = parent::get_data();
+        if (!$data) {
+            return null;
+        }
+
+        if (empty($data->teacherid) && !empty($data->courseid)) {
+            $data->teacherid = report_teacherlog_resolve_teacher_for_course((int)$data->courseid);
+        }
+
+        return $data;
     }
 
     /**
@@ -95,8 +124,21 @@ class report_form extends \moodleform {
     public function validation($data, $files) {
         $errors = parent::validation($data, $files);
 
-        if (empty($data['teacherid']) || !report_teacherlog_is_teacher((int)$data['teacherid'])) {
-            $errors['teacherid'] = get_string('invalidteacher', 'report_teacherlog');
+        $teacherid = (int)($data['teacherid'] ?? 0);
+        $courseid = (int)($data['courseid'] ?? 0);
+
+        if (!$teacherid && $courseid) {
+            $teacherid = report_teacherlog_resolve_teacher_for_course($courseid);
+        }
+
+        if (!$teacherid || !report_teacherlog_is_teacher($teacherid)) {
+            if ($courseid) {
+                $errors['courseid'] = get_string('nocourseteacher', 'report_teacherlog');
+            } else {
+                $errors['teacherid'] = get_string('chooseteacher', 'report_teacherlog');
+            }
+        } else if ($courseid && !report_teacherlog_teacher_in_course($teacherid, $courseid)) {
+            $errors['courseid'] = get_string('coursenotforteacher', 'report_teacherlog');
         }
 
         $timefrom = report_teacherlog_date_to_timestamp($data['timefrom']);
@@ -121,9 +163,12 @@ class report_form extends \moodleform {
     public static function normalize_params(\stdClass $data): \stdClass {
         $params = new \stdClass();
         $params->teacherid = (int)$data->teacherid;
+        if (empty($params->teacherid) && !empty($data->courseid)) {
+            $params->teacherid = report_teacherlog_resolve_teacher_for_course((int)$data->courseid);
+        }
+        $params->courseid = (int)($data->courseid ?? 0);
         $params->timefrom = report_teacherlog_date_to_timestamp($data->timefrom);
         $params->timeto = report_teacherlog_date_to_timestamp($data->timeto) + DAYSECS;
-        $params->filtercourse = trim($data->filtercourse ?? '');
         $params->filtermodule = trim($data->filtermodule ?? '');
         $params->filteraction = trim($data->filteraction ?? '');
         $params->choosereport = 1;

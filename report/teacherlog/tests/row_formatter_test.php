@@ -64,6 +64,7 @@ class row_formatter_test extends \advanced_testcase {
         $this->assertEquals(fullname($user), $row->fullname);
         $this->assertEquals(format_string($course->fullname, true, ['context' => \context_course::instance($course->id)]),
             $row->coursename);
+        $this->assertEquals($course->id, $row->courseid);
         $this->assertEquals('—', $row->modulename);
         $this->assertNotEmpty($row->action);
     }

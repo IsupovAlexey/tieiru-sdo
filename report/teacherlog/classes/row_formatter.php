@@ -34,7 +34,7 @@ final class row_formatter {
     /** @var string */
     private $teachername;
 
-    /** @var array<int, string> */
+    /** @var array<int, array{0: string, 1: string}> */
     private $coursenames = [];
 
     /** @var array<int, string> */
@@ -58,7 +58,8 @@ final class row_formatter {
         $row->timecreated = $event->timecreated;
         $row->datetime = userdate($event->timecreated, get_string('strftimedatetime', 'langconfig'));
         $row->fullname = $this->teachername;
-        $row->coursename = $this->get_course_name((int)$event->courseid);
+        $row->courseid = (int)$event->courseid;
+        [$row->coursename, $row->coursefiltertext] = $this->get_course_names($row->courseid);
         $row->modulename = $this->get_module_name($event);
         $row->action = $event->get_name();
 
@@ -67,20 +68,24 @@ final class row_formatter {
 
     /**
      * @param int $courseid
-     * @return string
+     * @return array{0: string, 1: string} display name and raw searchable text
      */
-    private function get_course_name(int $courseid): string {
+    private function get_course_names(int $courseid): array {
         if ($courseid <= 0) {
-            return get_string('site');
+            $sitename = get_string('site');
+            return [$sitename, $sitename];
         }
 
         if (!isset($this->coursenames[$courseid])) {
             try {
                 $course = get_course($courseid);
-                $this->coursenames[$courseid] = format_string($course->fullname, true,
+                $displayname = format_string($course->fullname, true,
                     ['context' => \context_course::instance($courseid)]);
+                $filtertext = trim($course->fullname . ' ' . $course->shortname);
+                $this->coursenames[$courseid] = [$displayname, $filtertext];
             } catch (\Throwable $e) {
-                $this->coursenames[$courseid] = get_string('unknowncourse');
+                $unknown = get_string('unknowncourse');
+                $this->coursenames[$courseid] = [$unknown, $unknown];
             }
         }
 
