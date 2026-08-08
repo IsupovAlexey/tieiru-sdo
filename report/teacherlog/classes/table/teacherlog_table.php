@@ -103,6 +103,6 @@ class teacherlog_table extends \flexible_table {
             ]);
         }
 
-        $this->finish_output(!$this->is_downloading());
+        $this->finish_output();
     }
 }
